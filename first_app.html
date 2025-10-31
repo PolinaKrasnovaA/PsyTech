@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Эмоциональные окружности с более сильным размытием</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500&display=swap&subset=cyrillic" rel="stylesheet" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+<style>
+  body {
+    margin: 0;
+    background-color: #222;
+    display: flex;
+    height: 100vh;
+    font-family: 'Rubik', sans-serif;
+    color: #f0f0f0;
+  }
+  #controls {
+    width: 140px;
+    background-color: #2c2c38;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 15px;
+    box-sizing: border-box;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.5);
+    justify-content: space-between;
+  }
+  #top-buttons {
+    display: flex;
+    flex-direction: column;
+  }
+  button {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+    border-radius: 12px;
+    color: #f0f0f0;
+    padding: 12px 20px;
+    font-size: 18px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    margin-bottom: 15px;
+    user-select: none;
+  }
+  button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(118, 75, 162, 0.6);
+  }
+  button:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+  }
+  button:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.7);
+  }
+  #stop-sound-btn {
+    font-size: 24px;
+    padding: 10px 0;
+    text-align: center;
+  }
+  #canvas-container {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #111;
+  }
+  canvas {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.8);
+    border: 1px solid #555;
+  }
+</style>
+</head>
+<body>
+
+<div style="display: flex; height: 100%;">
+  <div id="controls">
+    <div id="top-buttons">
+      <button id="sadness-btn">Грусть</button>
+      <button id="joy-btn">Радость</button>
+      <button id="anxiety-btn">Тревога</button>
+    </div>
+    <button id="stop-sound-btn" title="Остановить все звуки"><i class="fas fa-volume-mute"></i></button>
+  </div>
+
+  <div id="canvas-container">
+    <canvas id="canvas"></canvas>
+  </div>
+</div>
+
+<audio id="rain-audio" src="rain.wav" preload="auto" loop></audio>
+<audio id="flute-audio" src="joy.mp3" preload="auto" loop></audio>
+<audio id="storm-audio" src="storm.wav" preload="auto" loop></audio>
+
+<script>
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  const sadnessBtn = document.getElementById('sadness-btn');
+  const joyBtn = document.getElementById('joy-btn');
+  const anxietyBtn = document.getElementById('anxiety-btn');
+  const stopSoundBtn = document.getElementById('stop-sound-btn');
+
+  const rainAudio = document.getElementById('rain-audio');
+  const fluteAudio = document.getElementById('flute-audio');
+  const stormAudio = document.getElementById('storm-audio');
+
+  const image = new Image();
+
+  let sadnessRadius = 0;
+  let joyRadius = 0;
+  let anxietyRadius = 0;
+
+  let sadnessAlpha = 0;
+  let joyAlpha = 0;
+  let anxietyAlpha = 0;
+
+  image.src = 'image.png';
+  image.onload = () => {
+    canvas.width = image.width;
+    canvas.height = image.height;
+    drawImage();
+  };
+
+  function drawImage() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(image, 0, 0);
+
+    const maxRadius = Math.min(canvas.width, canvas.height) / 2;
+    const centerDistanceXY = 0.75 * maxRadius;
+    const centerXLeft = centerDistanceXY;
+    const centerXRight = canvas.width - centerDistanceXY;
+    const centerYMiddle = canvas.height / 2;
+    const centerYBottom = canvas.height - maxRadius / 2;
+
+    if (sadnessAlpha > 0) {
+      ctx.globalAlpha = sadnessAlpha;
+      ctx.shadowColor = 'blue';
+      ctx.shadowBlur = Math.max(sadnessRadius * 0.7, 30);
+      ctx.fillStyle = 'blue';
+      ctx.beginPath();
+      ctx.arc(centerXLeft, centerYMiddle, sadnessRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    if (joyAlpha > 0) {
+      ctx.globalAlpha = joyAlpha;
+      ctx.shadowColor = 'yellow';
+      ctx.shadowBlur = Math.max(joyRadius * 0.7, 30);
+      ctx.fillStyle = 'yellow';
+      ctx.beginPath();
+      ctx.arc(centerXRight, centerYMiddle, joyRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    if (anxietyAlpha > 0) {
+      ctx.globalAlpha = anxietyAlpha;
+      ctx.shadowColor = 'red';
+      ctx.shadowBlur = Math.max(anxietyRadius * 0.7, 30);
+      ctx.fillStyle = 'red';
+      ctx.beginPath();
+      ctx.arc(canvas.width / 2, centerYBottom, anxietyRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    ctx.globalAlpha = 1;
+  }
+
+  sadnessBtn.addEventListener('click', () => {
+    if (sadnessRadius === 0) {
+      sadnessRadius = Math.min(canvas.width, canvas.height) / 4;
+      sadnessAlpha = 0.1;
+      rainAudio.currentTime = 0;
+      rainAudio.play();
+    } else {
+      sadnessRadius *= 1.1;
+      sadnessAlpha = Math.min(1, sadnessAlpha + 0.1);
+      if (rainAudio.paused) {
+        rainAudio.currentTime = 0;
+        rainAudio.play();
+      }
+    }
+    drawImage();
+  });
+
+  joyBtn.addEventListener('click', () => {
+    if (joyRadius === 0) {
+      joyRadius = Math.min(canvas.width, canvas.height) / 4;
+      joyAlpha = 0.1;
+      fluteAudio.currentTime = 0;
+      fluteAudio.play();
+    } else {
+      joyRadius *= 1.1;
+      joyAlpha = Math.min(1, joyAlpha + 0.1);
+      if (fluteAudio.paused) {
+        fluteAudio.currentTime = 0;
+        fluteAudio.play();
+      }
+    }
+    drawImage();
+  });
+
+  anxietyBtn.addEventListener('click', () => {
+    if (anxietyRadius === 0) {
+      anxietyRadius = Math.min(canvas.width, canvas.height) / 4;
+      anxietyAlpha = 0.1;
+      stormAudio.currentTime = 0;
+      stormAudio.play();
+    } else {
+      anxietyRadius *= 1.1;
+      anxietyAlpha = Math.min(1, anxietyAlpha + 0.1);
+      if (stormAudio.paused) {
+        stormAudio.currentTime = 0;
+        stormAudio.play();
+      }
+    }
+    drawImage();
+  });
+
+  stopSoundBtn.addEventListener('click', () => {
+    rainAudio.pause();
+    fluteAudio.pause();
+    stormAudio.pause();
+  });
+</script>
+
+</body>
+</html>
